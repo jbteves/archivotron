@@ -3,11 +3,13 @@ from archivotron import PathGenerator
 import pytest
 
 def test_constructor():
+    """Makes sure the constructor works"""
     pg = PathGenerator("/data/tevesjb/my_project")
     assert pg is not None
 
 def test_add_attribute():
-    # Verify we can add a normal attribute
+    """Makes sure that add attribute has basic functionality"""
+    # Verify we can add a normal attribute, should crash if not
     pg = PathGenerator("/")
     pg.add_attribute(
         "subject",
@@ -15,5 +17,5 @@ def test_add_attribute():
     )
 
     # Verify that adding an attribute that's a duplicate fails
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=r"^Attempted to overwrite*"):
         pg.add_attribute("subject", int)

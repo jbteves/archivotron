@@ -76,6 +76,11 @@ class PathGenerator:
         ------
         TypeError, if anything is the wrong type
         """
+        if name in self._attributes.keys():
+            raise ValueError(
+                f"Attempted to overwrite existing key {name}"
+            )
+
         self._attributes[name] = {
             "takes_value": takes_value,
             "type": att_type,
