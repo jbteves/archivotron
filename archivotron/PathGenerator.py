@@ -19,6 +19,10 @@ class PathGenerator:
         values only instead of key-value pairs
     _levels_allowed: bool
         Whether a level or fname may be appended
+    _attribute_sep: str
+        The attribute separatator. Default "_"
+    _kv_sep: str
+        The key-value separator. Default "-"
 
     Methods
     -------
@@ -27,7 +31,12 @@ class PathGenerator:
     add_fname
     from
     """
-    def __init__(self, root: str) -> None:
+    def __init__(
+        self,
+        root: str,
+        attribute_sep: str = "_",
+        kv_sep: str = "-",
+    ) -> None:
         """Constructs a new PathGenerator
 
         Parameters
@@ -47,7 +56,10 @@ class PathGenerator:
         self._attributes = {}
         self._instructions = []
         self._instructions_val_only = []
-        self._levels_allowed = True
+        self._level_allowed = True
+        self._attribute_sep = "_"
+        self._kv_sep = "-"
+
     def add_attribute(
         self,
         name: str,
@@ -86,6 +98,7 @@ class PathGenerator:
             "type": att_type,
             "required": required,
         }
+
     def add_level(
         self,
         attribute: Union[list, str],
@@ -158,9 +171,9 @@ class PathGenerator:
                 " already defined!"
             )
         self.add_level(attributes, value_only)
-        self._levels_allowed = False
+        self._level_allowed = False
 
-    def from_att(self, attributes: dict) -> str:
+    def gen_path(self, attributes: dict) -> str:
         """Generates a full path from attribute dict
 
         Parameters
@@ -177,7 +190,47 @@ class PathGenerator:
         Raises
         ------
         ValueError, if the attributes were not legal or a required
-            attribute is missing.
+            attribute is missing, or if there is no path target yet.
         TypeError, if there are any incorrect types
         """
-        return ""
+        if self._level_allowed:
+            raise ValueError("No path target completed!")
+
+        for k, v in attributes.items():
+            if k not in self._attributes:
+                raise ValueError(f"Attribute {k} is not valid")
+
+            type_required = self._attributes[k]["type"]
+            type_received = type(v)
+
+            if not isinstance(v, self._attributes[k]["type"]):
+                raise TypeError(
+                    f"Attribute type should be {type_required} for {k}, is "
+                    f"{type_received}"
+                )
+
+        # Build the path
+        path = ""
+        for i in range(len(self._instructions)):
+            instruction = self._instructions[i]
+            val_only = self._instructions_val_only[i]
+            print(f"{instruction}, {val_only}")
+
+            if isinstance(instruction, str):
+                instruction = [instruction]
+            
+            if val_only:
+                path += self._attribute_sep.join(instruction)
+            else:
+                if isinstance(instruction, str):
+                    atts = [instruction]
+                else:
+                    atts = instruction
+                entries = []
+                for att in atts:
+                    entries.append(
+                        f"{att}{self._kv_sep}{attributes[att]}"
+                    )
+                path += self._attribute_sep.join(entries)
+
+        return path
