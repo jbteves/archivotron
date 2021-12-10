@@ -1,0 +1,38 @@
+name: Run Tests
+on:
+  push:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  Collect-Data-and-Test:
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PLACEHOLDER_VARIABLE: herp
+      CODE_PATH: ${{ github.workspace }}/archivotron
+
+    strategy:
+      matrix:
+        os: [macOS-latest, ubuntu-latest]
+        python: 3.9 # once this is successful we will expand to the many versions of python [3.6, 3.7, 3.8, 3.9]
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v1
+        with:
+          python-version: matrix.python
+
+      - uses: Gr1N/setup-poetry@v7
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pypoetry/virtualenvs
+          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
+
+      - run: poetry --version
+
+      - run: poetry run pytest
