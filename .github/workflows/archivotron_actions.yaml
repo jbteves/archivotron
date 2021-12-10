@@ -24,7 +24,6 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v1
-        if: contains(matrix.os, 'ubuntu')
         with:
           python-version: ${{ matrix.python }}
 
