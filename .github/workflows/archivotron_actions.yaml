@@ -17,14 +17,23 @@ jobs:
       matrix:
         os: [macOS-latest, ubuntu-latest]
         python: [3.6, 3.7, 3.8, 3.9]
+        mac_python: [3.7, 3.8, 3.9]
 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v1
+      - name: Setup Python Ubuntu
+        uses: actions/setup-python@v1
+        if: contains(matrix.os, 'ubuntu')
         with:
           python-version: ${{ matrix.python }}
+
+      - name: Setup Python Mac
+        uses: actions/setup-python@v1
+        if: contains(matrix.os, 'mac')
+        with:
+          python-version: ${{ matrix.mac_python }}
 
       - uses: Gr1N/setup-poetry@v7
 
