@@ -234,3 +234,69 @@ class PathGenerator:
                 path += self._attribute_sep.join(entries)
 
         return path
+
+
+class NameComponent:
+    """Contains information to construct name components in a path,
+    constructed from attribute key-value pairs.
+
+    Attributes
+    ----------
+    key: str
+        The key which is used
+    val_type: type in (str, int)
+        The type that the value should be
+    kv_delim: str
+        The delimeter between the key and value to be used
+    value_only: bool
+        Whether this namer should only display the value
+    width: int
+        The width to display a value with
+
+    Methods
+    -------
+    name
+
+    Examples
+    --------
+    1) Build a NameComponent with subject and ID, use defaults, print name
+    >>> NameComponent("sub", str).name({"sub": "Anthony"})
+    "sub-Anthony"
+
+    2) Build a NameComponent with subject and number, use defaults, specify
+    a width for the session number
+    >>> NameComponent("sub", int, width=2).name({"sub": 1})
+    "sub-01"
+
+    3) Build a NameComponent with only a value
+    >>> NameComponent("sub", int, width=2}).name({"sub": 1})
+    "01"
+    """
+    def __init__(
+        self,
+        key: str,
+        val_type: type,
+        kv_delim: str,
+        value_only: bool = False,
+        width: int = None
+    ) -> None:
+        self.key = key
+        self.val_type = val_type
+        self.kv_delim = kv_delim
+        self.value_only = value_only
+        self.width = width
+    
+    def name(attributes: dict) -> str:
+        """Names a component from the given attributes
+
+        Parameters
+        ----------
+        attributes: dict
+            The dictionary which contains the key-value pair to use in
+            order to name the component.
+
+        Returns
+        -------
+        String representing the name component.
+        """
+        return ""
