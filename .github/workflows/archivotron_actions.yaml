@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  Collect-Data-and-Test:
+  Setup_and_Run_Tests:
     runs-on: ${{ matrix.os }}
 
     env:
@@ -24,7 +24,7 @@ jobs:
 
       - uses: actions/setup-python@v1
         with:
-          python-version: matrix.python
+          python-version: ${{ matrix.python }}
 
       - uses: Gr1N/setup-poetry@v7
 
