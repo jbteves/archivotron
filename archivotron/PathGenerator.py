@@ -261,16 +261,16 @@ class NameComponent:
     --------
     1) Build a NameComponent with subject and ID, use defaults, print name
     >>> NameComponent("sub", str, "-").name({"sub": "Anthony"})
-    "sub-Anthony"
+    'sub-Anthony'
 
     2) Build a NameComponent with subject and number, use defaults, specify
     a width for the session number
-    >>> NameComponent("sub", int, "-"width=2).name({"sub": 1})
-    "sub-01"
+    >>> NameComponent("sub", int, "-", width=2).name({"sub": 1})
+    'sub-01'
 
     3) Build a NameComponent with only a value
-    >>> NameComponent("sub", int, None, width=2}).name({"sub": 1})
-    "01"
+    >>> NameComponent("sub", int, None, width=2, value_only=True).name({"sub": 1})
+    '01'
     """
     def __init__(
         self,
@@ -299,4 +299,18 @@ class NameComponent:
         -------
         String representing the name component.
         """
-        return ""
+        # Build the value component, which is always needed
+        value = attributes[self.key]
+        if self.width is not None:
+            if self.val_type is str:
+                value_component = f"{value:{self.width}}"
+            elif self.val_type is int:
+                value_component = f"{value:0{self.width}}"
+        else:
+            value_component = value
+        # Add key component if needed
+        if self.value_only:
+            component = value_component
+        else:
+            component = self.key + self.kv_delim + value_component
+        return component
