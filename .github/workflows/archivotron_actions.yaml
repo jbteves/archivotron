@@ -28,11 +28,14 @@ jobs:
 
       - uses: Gr1N/setup-poetry@v7
 
+      - name: Test Poetry is Setup
+        run: poetry --version
+
+      - run: poetry install
+
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pypoetry/virtualenvs
           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-
-      - run: poetry --version
 
       - run: poetry run pytest
