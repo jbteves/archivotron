@@ -40,8 +40,9 @@ jobs:
           path: ~/.cache/pypoetry/virtualenvs
           key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
 
+      - name: Run Flake8
+        run: poetry run flake8
+
       - name: Run Tests w/ Pytest
         run: poetry run pytest
 
-      - name: Run Flake8
-        run: poetry run flak8
