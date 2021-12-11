@@ -31,6 +31,7 @@ class PathGenerator:
     add_fname
     from
     """
+
     def __init__(
         self,
         root: str,
@@ -64,7 +65,7 @@ class PathGenerator:
         self,
         name: str,
         att_type: type,
-        takes_value: bool = True, 
+        takes_value: bool = True,
         required: bool = True,
     ) -> None:
         """Defines an attribute that could generate a path
@@ -218,7 +219,7 @@ class PathGenerator:
 
             if isinstance(instruction, str):
                 instruction = [instruction]
-            
+
             if val_only:
                 path += self._attribute_sep.join(instruction)
             else:
