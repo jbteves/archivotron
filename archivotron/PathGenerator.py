@@ -63,7 +63,6 @@ class PathGenerator:
     def add_attribute(
         self,
         name: str,
-        att_type: type,
         takes_value: bool = True, 
         required: bool = True,
     ) -> None:
@@ -73,8 +72,6 @@ class PathGenerator:
         ----------
         name: str
             The name of the attribute
-        type: type
-            The expected type of the attribute
         takes_value: bool, optional
             Whether this attribute takes a value. Default True.
         required: bool, optional
@@ -95,7 +92,6 @@ class PathGenerator:
 
         self._attributes[name] = {
             "takes_value": takes_value,
-            "type": att_type,
             "required": required,
         }
 
@@ -108,7 +104,7 @@ class PathGenerator:
 
         Parameters
         ----------
-        attribute: Union[list, str],
+        attribute: [list, str],
             If a string, the attribute which is used to define the name.
             If a list, the attributes to be joined to define the name.
         value_only: bool, optional
@@ -200,15 +196,6 @@ class PathGenerator:
             if k not in self._attributes:
                 raise ValueError(f"Attribute {k} is not valid")
 
-            type_required = self._attributes[k]["type"]
-            type_received = type(v)
-
-            if not isinstance(v, self._attributes[k]["type"]):
-                raise TypeError(
-                    f"Attribute type should be {type_required} for {k}, is "
-                    f"{type_received}"
-                )
-
         # Build the path
         path = ""
         for i in range(len(self._instructions)):
@@ -244,14 +231,10 @@ class NameComponent:
     ----------
     key: str
         The key which is used
-    val_type: type in (str, int)
-        The type that the value should be
     kv_delim: str
         The delimeter between the key and value to be used
     value_only: bool
         Whether this namer should only display the value
-    width: int
-        The width to display a value with
 
     Methods
     -------
@@ -260,31 +243,22 @@ class NameComponent:
     Examples
     --------
     1) Build a NameComponent with subject and ID, use defaults, print name
-    >>> NameComponent("sub", str, "-").name({"sub": "Anthony"})
+    >>> NameComponent("sub", "-").name({"sub": "Anthony"})
     'sub-Anthony'
 
-    2) Build a NameComponent with subject and number, use defaults, specify
-    a width for the session number
-    >>> NameComponent("sub", int, "-", width=2).name({"sub": 1})
-    'sub-01'
-
-    3) Build a NameComponent with only a value
-    >>> NameComponent("sub", int, None, width=2, value_only=True).name({"sub": 1})
+    2) Build a NameComponent with only a value
+    >>> NameComponent("sub", None, value_only=True).name({"sub": "01"})
     '01'
     """
     def __init__(
         self,
         key: str,
-        val_type: type,
         kv_delim: str,
         value_only: bool = False,
-        width: int = None
     ) -> None:
         self.key = key
-        self.val_type = val_type
         self.kv_delim = kv_delim
         self.value_only = value_only
-        self.width = width
     
     def name(self, attributes: dict) -> str:
         """Names a component from the given attributes
@@ -301,16 +275,9 @@ class NameComponent:
         """
         # Build the value component, which is always needed
         value = attributes[self.key]
-        if self.width is not None:
-            if self.val_type is str:
-                value_component = f"{value:{self.width}}"
-            elif self.val_type is int:
-                value_component = f"{value:0{self.width}}"
-        else:
-            value_component = value
         # Add key component if needed
         if self.value_only:
-            component = value_component
+            component = value
         else:
-            component = self.key + self.kv_delim + value_component
+            component = self.key + self.kv_delim + value
         return component

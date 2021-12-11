@@ -13,21 +13,18 @@ def test_add_attribute():
     """Makes sure that add attribute has basic functionality"""
     # Verify we can add a normal attribute, should crash if not
     pg = PathGenerator("/")
-    pg.add_attribute(
-        "subject",
-        str,
-    )
+    pg.add_attribute("subject")
 
     # Verify that adding an attribute that's a duplicate fails
     with pytest.raises(ValueError, match=r"^Attempted to overwrite*"):
-        pg.add_attribute("subject", int)
+        pg.add_attribute("subject")
 
 
 def test_gen_path_succeeds():
     """Tests for gen_path successes"""
     pg = PathGenerator("/")
-    pg.add_attribute("subject", str)
-    pg.add_attribute("session", str)
+    pg.add_attribute("subject")
+    pg.add_attribute("session")
     pg.add_fname(["subject", "session"])
 
     atts = {
@@ -40,7 +37,7 @@ def test_gen_path_succeeds():
 def test_gen_path_fails():
     """Tests for gen_path failures"""
     pg = PathGenerator("/")
-    pg.add_attribute("subject", str)
+    pg.add_attribute("subject")
     
     # Should fail because no path target
     with pytest.raises(ValueError, match=r"^No path target completed!"):
@@ -51,10 +48,3 @@ def test_gen_path_fails():
     # Should fail because not a valid attribute
     with pytest.raises(ValueError, match=r"^Attribute pencils is not valid"):
         pg.gen_path( {"pencils": 5} )
-
-    # Should fail because of wrong type
-    with pytest.raises(
-        TypeError,
-        match=r"Attribute type should be *"
-    ):
-        pg.gen_path( { "subject": 1 } )
