@@ -22,17 +22,36 @@ def test_add_attribute():
 
 def test_gen_path_succeeds():
     """Tests for gen_path successes"""
-    pg = PathGenerator("/")
+    pg = PathGenerator()
+    # Set attributes
     pg.add_attribute("subject")
     pg.add_attribute("session")
-    pg.add_fname(["subject", "session"])
+    # Build path
+    pg.add_component("subject")
+    pg.add_filesep()
+    pg.add_component("session")
+    pg.add_filesep()
+    pg.add_component("modality", value_only=True)
+    pg.add_filesep()
+    pg.add_component("subject")
+    pg.add_component("session")
+    pg.add_component("submodality", value_only=True)
+    pg.terminate()
 
     atts = {
         "subject": "Jen",
         "session": "1",
+        "modality": "anat",
+        "submodality": "T1w"
     }
 
-    assert pg.gen_path(atts) == "subject-Jen_session-1"
+    expected = (
+        "/subject-Jen"
+        "/session-1"
+        "/anat"
+        "/subject-Jen_session-1_T1w"
+    )
+    assert pg.gen_path(atts) == expected
 
 
 def test_gen_path_fails():
@@ -41,10 +60,11 @@ def test_gen_path_fails():
     pg.add_attribute("subject")
 
     # Should fail because no path target
-    with pytest.raises(ValueError, match=r"^No path target completed!"):
+    with pytest.raises(ValueError, match=r"^No path target completed!*"):
         pg.gen_path({"subject": "Jen"})
 
-    pg.add_fname("subject")
+    pg.add_component("subject")
+    pg.terminate()
 
     # Should fail because not a valid attribute
     with pytest.raises(ValueError, match=r"^Attribute pencils is not valid"):

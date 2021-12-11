@@ -2,27 +2,26 @@
 
 from typing import Union
 
+import os
+
 
 class PathGenerator:
     """A class to generate paths from specified attributes
 
     Attributes
     ----------
-    _root: str
-        The path to the root of the relevant project
     _attributes: dict
         A dictionary of various attributes and their properties
-    _instructions: list
-        A list of instructions for constructing paths from attributes
-    _instructions_val_only: list
-        A list of booleans indicating whether instructions should print
-        values only instead of key-value pairs
-    _levels_allowed: bool
-        Whether a level or fname may be appended
+    _components: list(NameComponent)
+        A list of naming components
+    _terminated: bool
+        Whether this object's builder pattern has terminated
     _attribute_sep: str
         The attribute separatator. Default "_"
     _kv_sep: str
         The key-value separator. Default "-"
+    _file_sep: str
+        The file separator. Default is platform-specific from os.path.
 
     Methods
     -------
@@ -33,9 +32,10 @@ class PathGenerator:
     """
     def __init__(
         self,
-        root: str,
+        root: str = "",
         attribute_sep: str = "_",
         kv_sep: str = "-",
+        file_sep: str = None,
     ) -> None:
         """Constructs a new PathGenerator
 
@@ -43,6 +43,14 @@ class PathGenerator:
         ----------
         root: str
             The root directory which all paths are relative to
+        attribute_sep: str, optional
+            The default delimeter for attributes. Default "_".
+        kv_sep: str, optional
+            The default delimiter for key-value pairs. Default "-".
+        file_sep: str, optional
+            The default delimeter for file paths. Default system-dependent.
+            ADMONITION: unless you are writing code for another machine, it
+            you should probably not override this.
 
         Returns
         -------
@@ -52,13 +60,23 @@ class PathGenerator:
         ------
         TypeError, if anything is the wrong type
         """
-        self._root = root
         self._attributes = {}
-        self._instructions = []
-        self._instructions_val_only = []
-        self._level_allowed = True
+        self._terminated = False
         self._attribute_sep = "_"
         self._kv_sep = "-"
+        if file_sep is None:
+            self._file_sep = os.path.sep
+        elif file_sep in ("/", "\\"):
+            self._file_sep = file_sep
+        else:
+            raise ValueError(
+                f"Specified file separator {file_sep} is not valid for most"
+                " machines, terminating execution."
+            )
+        if root == "":
+            self._components = [self._file_sep]
+        else:
+            self._components = [root + self._file_sep]
 
     def add_attribute(
         self,
@@ -95,132 +113,109 @@ class PathGenerator:
             "required": required,
         }
 
-    def add_level(
+    def add_component(
         self,
-        attribute: Union[list, str],
+        key: str,
+        delimiter: str = None,
         value_only: bool = False,
     ) -> None:
-        """Defines a new level in the path
+        """Adds a name component to the path to generate
 
         Parameters
         ----------
-        attribute: [list, str],
-            If a string, the attribute which is used to define the name.
-            If a list, the attributes to be joined to define the name.
+        key: str
+            The key that this component will use
+        delimiter: str, optional
+            The delimiter that this component will use. Default is to use
+            the path generator's kvsep attribute. Use "" to indicate no
+            delimeter. This value is ignored if value_only is True.
         value_only: bool, optional
-            Whether to ignore the attribute names and only use their
-            values. Default False.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError, if any incorrect types
-        ValueError, if a filename was already defined
+            Whether this name component will print only the value.
         """
-        if not self._level_allowed:
-            raise ValueError(
-                "Attempted to define new level after fname defined!"
-            )
-        if isinstance(attribute, str):
-            self._instructions.append([attribute])
-        elif isinstance(attribute, list):
-            self._instructions.append(
-                [s for s in attribute]
-            )
+        if delimiter is None:
+            delimiter = self._kv_sep
+        nc = NameComponent(key, delimiter, value_only=value_only)
+        # We have to make sure we don't have 0 elements, or else we'll have
+        # an index error.
+        if len(self._components) == 0:
+            self._components.append(nc)
+        elif isinstance(self._components[-1], NameComponent):
+            # Insert the default delimiter between components
+            self._components.append(self._attribute_sep)
+            self._components.append(nc)
         else:
-            raise TypeError(
-                f"attribute should be str or list, is {type(attribute)}"
-            )
-        self._instructions_val_only.append(value_only)
+            # We already have an overridden delimiter, no need to add the
+            # default delimiter
+            self._components.append(nc)
 
-    def add_fname(
-        self,
-        attributes: Union[list, str],
-        value_only: bool = False
-    ) -> None:
-        """Defines the filename (prevents adding further levels)
+    def delimiter_override(self, delimiter: str) -> None:
+        """Adds a delimiter override
 
         Parameters
         ----------
-        attribute: Union[list, str],
-            If a string, the attribute which is used to define the name.
-            If a list, the attributes to be joined to define the name.
-        value_only: bool, optional
-            Whether to ignore the attribute names and only use their
-            values. Default False.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError, if any types incorrect
-        ValueError, if a filename was already defined
+        delimiter: str
+            The delimiter to override with
         """
-        if not self._level_allowed:
-            raise ValueError(
-                "Attempted to define a new filename after one was"
-                " already defined!"
-            )
-        self.add_level(attributes, value_only)
-        self._level_allowed = False
+        self._components.append(delimiter)
+
+    def add_filesep(self):
+        """Adds a file separator to the name component list"""
+        self._components.append(self._file_sep)
+
+    def terminate(self):
+        """Terminate the build pattern"""
+        self._terminated = True
 
     def gen_path(self, attributes: dict) -> str:
-        """Generates a full path from attribute dict
+        """Generate a path with this generator and an attribute dict
 
         Parameters
         ----------
         attributes: dict
-            A dictionary of attributes and their values to generate the
-            filename from.
-
-        Returns
-        -------
-        A str representing the path to the file specified by the given
-        attributes.
+            The attributes to use for this path generator
 
         Raises
         ------
-        ValueError, if the attributes were not legal or a required
-            attribute is missing, or if there is no path target yet.
-        TypeError, if there are any incorrect types
+        ValueError if one of the attributes was not supplied to this path
+            generator.
         """
-        if self._level_allowed:
-            raise ValueError("No path target completed!")
+        if not self._terminated:
+            raise ValueError(
+                "No path target completed!"
+                "Use the terminate_path method to terminate the builder."
+            )
 
-        for k, v in attributes.items():
-            if k not in self._attributes:
-                raise ValueError(f"Attribute {k} is not valid")
-
-        # Build the path
-        path = ""
-        for i in range(len(self._instructions)):
-            instruction = self._instructions[i]
-            val_only = self._instructions_val_only[i]
-            print(f"{instruction}, {val_only}")
-
-            if isinstance(instruction, str):
-                instruction = [instruction]
-
-            if val_only:
-                path += self._attribute_sep.join(instruction)
-            else:
-                if isinstance(instruction, str):
-                    atts = [instruction]
-                else:
-                    atts = instruction
-                entries = []
-                for att in atts:
-                    entries.append(
-                        f"{att}{self._kv_sep}{attributes[att]}"
-                    )
-                path += self._attribute_sep.join(entries)
+        try:
+            path = "".join(
+                [PathGenerator._str(x, attributes) for x in self._components]
+            )
+        except KeyError:
+            # Apparently KeyError doesn't retain which key failed
+            for k in attributes.keys():
+                if k not in self._attributes.keys():
+                    raise ValueError(f"Attribute {k} is not valid")
 
         return path
+
+    def _str(o: Union[str, "NameComponent"], att: dict) -> str:
+        """Ingests a string or name component and returns a string
+
+        Parameters
+        ----------
+        o: str | NameComponent
+            The object to turn into a string
+        att: dict
+            The attribute dictionary, in case the object is a NameComponent
+
+        Returns
+        -------
+        The string representation of the object
+        """
+
+        if isinstance(o, str):
+            return o
+        elif isinstance(o, NameComponent):
+            return o.name(att)
 
 
 class NameComponent:
