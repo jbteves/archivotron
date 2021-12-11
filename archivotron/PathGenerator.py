@@ -63,7 +63,7 @@ class PathGenerator:
     def add_attribute(
         self,
         name: str,
-        takes_value: bool = True, 
+        takes_value: bool = True,
         required: bool = True,
     ) -> None:
         """Defines an attribute that could generate a path
@@ -205,7 +205,7 @@ class PathGenerator:
 
             if isinstance(instruction, str):
                 instruction = [instruction]
-            
+
             if val_only:
                 path += self._attribute_sep.join(instruction)
             else:
@@ -259,7 +259,7 @@ class NameComponent:
         self.key = key
         self.kv_delim = kv_delim
         self.value_only = value_only
-    
+
     def name(self, attributes: dict) -> str:
         """Names a component from the given attributes
 
