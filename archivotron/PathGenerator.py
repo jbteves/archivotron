@@ -62,8 +62,8 @@ class PathGenerator:
         """
         self._attributes = {}
         self._terminated = False
-        self._attribute_sep = "_"
-        self._kv_sep = "-"
+        self._attribute_sep = attribute_sep
+        self._kv_sep = kv_sep
         if file_sep is None:
             self._file_sep = os.path.sep
         elif file_sep in ("/", "\\"):
@@ -73,7 +73,9 @@ class PathGenerator:
                 f"Specified file separator {file_sep} is not valid for most"
                 " machines, terminating execution."
             )
-        if root == "":
+        if root is None:
+            self._components = []
+        elif root == "":
             self._components = [self._file_sep]
         else:
             self._components = [root + self._file_sep]

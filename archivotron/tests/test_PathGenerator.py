@@ -53,6 +53,34 @@ def test_gen_path_succeeds():
     )
     assert pg.gen_path(atts) == expected
 
+    af = PathGenerator(None, attribute_sep=".", kv_sep="")
+    # Set attributes
+    af.add_attribute("pb")
+    af.add_attribute("subj")
+    af.add_attribute("r")
+    af.add_attribute("step")
+    af.add_attribute("space")
+    # Build path
+    af.add_component("pb")
+    af.add_component("subj")
+    af.add_component("r")
+    af.add_component("step", value_only=True)
+    af.delimiter_override("+")
+    af.add_component("space", value_only=True)
+    af.terminate()
+
+    atts = {
+        "pb": "01",
+        "subj": "99",
+        "r": "01",
+        "step": "tshift",
+        "space": "orig",
+    }
+
+    expected = "pb01.subj99.r01.tshift+orig"
+
+    assert af.gen_path(atts) == expected
+
 
 def test_gen_path_fails():
     """Tests for gen_path failures"""
