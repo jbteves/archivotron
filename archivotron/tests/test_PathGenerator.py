@@ -37,24 +37,25 @@ def test_gen_path_succeeds():
 
     assert pg.gen_path(atts) == "subject-Jen_session-1"
 
+
 def test_gen_path_fails():
     """Tests for gen_path failures"""
     pg = PathGenerator("/")
     pg.add_attribute("subject", str)
-    
+
     # Should fail because no path target
     with pytest.raises(ValueError, match=r"^No path target completed!"):
-        pg.gen_path( { "subject": "Jen" } )
+        pg.gen_path({"subject": "Jen"})
 
     pg.add_fname("subject")
 
     # Should fail because not a valid attribute
     with pytest.raises(ValueError, match=r"^Attribute pencils is not valid"):
-        pg.gen_path( {"pencils": 5} )
+        pg.gen_path({"pencils": 5})
 
     # Should fail because of wrong type
     with pytest.raises(
         TypeError,
         match=r"Attribute type should be *"
     ):
-        pg.gen_path( { "subject": 1 } )
+        pg.gen_path({"subject": 1})
