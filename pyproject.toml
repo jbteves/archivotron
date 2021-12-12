@@ -11,6 +11,9 @@ python = "^3.6"
 [tool.poetry.dev-dependencies]
 pytest = "*"
 flake8-2020 = "*"
+Sphinx = "^4.3.1"
+numpydoc = "^1.1.0"
+sphinx-rtd-theme = "^1.0.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
