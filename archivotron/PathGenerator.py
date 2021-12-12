@@ -25,7 +25,6 @@ class PathGenerator:
 
     Methods
     -------
-    add_attribute
     add_level
     add_fname
     from
@@ -60,7 +59,7 @@ class PathGenerator:
         ------
         TypeError, if anything is the wrong type
         """
-        self._attributes = {}
+        self._attributes = set()
         self._terminated = False
         self._attribute_sep = attribute_sep
         self._kv_sep = kv_sep
@@ -80,46 +79,12 @@ class PathGenerator:
         else:
             self._components = [root + self._file_sep]
 
-    def add_attribute(
-        self,
-        name: str,
-        takes_value: bool = True,
-        required: bool = True,
-    ) -> None:
-        """Defines an attribute that could generate a path
-
-        Parameters
-        ----------
-        name: str
-            The name of the attribute
-        takes_value: bool, optional
-            Whether this attribute takes a value. Default True.
-        required: bool, optional
-            Whether this attribute is required to generate a name
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        TypeError, if anything is the wrong type
-        """
-        if name in self._attributes.keys():
-            raise ValueError(
-                f"Attempted to overwrite existing key {name}"
-            )
-
-        self._attributes[name] = {
-            "takes_value": takes_value,
-            "required": required,
-        }
-
     def add_component(
         self,
         key: str,
         delimiter: str = None,
         value_only: bool = False,
+        required: bool = True,
     ) -> None:
         """Adds a name component to the path to generate
 
@@ -134,9 +99,12 @@ class PathGenerator:
         value_only: bool, optional
             Whether this name component will print only the value.
         """
+        self._attributes.add(key)
         if delimiter is None:
             delimiter = self._kv_sep
-        nc = NameComponent(key, delimiter, value_only=value_only)
+        nc = NameComponent(
+            key, delimiter, value_only=value_only, required=required
+        )
         # We have to make sure we don't have 0 elements, or else we'll have
         # an index error.
         if len(self._components) == 0:
@@ -194,8 +162,10 @@ class PathGenerator:
         except KeyError:
             # Apparently KeyError doesn't retain which key failed
             for k in attributes.keys():
-                if k not in self._attributes.keys():
+                if k not in self._attributes:
                     raise ValueError(f"Attribute {k} is not valid")
+
+        path = self._strip_repeat_delimiters(path)
 
         return path
 
@@ -219,6 +189,31 @@ class PathGenerator:
         elif isinstance(o, NameComponent):
             return o.name(att)
 
+    def _strip_repeat_delimiters(self, path: str) -> str:
+        """Ingests a path and strips out repeat delimiters as defined by
+        the name components in this object.
+
+        Parameters
+        ----------
+        path: str
+            The path to strip repeat delimiters from
+
+        Returns
+        -------
+        A path with no repeat delimiters
+        """
+        delimiters = set()
+        for c in self._components:
+            if isinstance(c, str):
+                delimiters.add(c)
+            else:
+                delimiters.add(c.kv_delim)
+        for d in delimiters:
+            if d != "":
+                fields = path.split(d)
+                path = d.join([x for x in fields if x != ""])
+        return path
+
 
 class NameComponent:
     """Contains information to construct name components in a path,
@@ -231,7 +226,10 @@ class NameComponent:
     kv_delim: str
         The delimeter between the key and value to be used
     value_only: bool
-        Whether this namer should only display the value
+        Whether this namer should only display the value. Default False.
+    required: bool
+        Whether this name component is required. Default False. If a name
+        is value_only, required is automatically set to True.
 
     Methods
     -------
@@ -246,16 +244,34 @@ class NameComponent:
     2) Build a NameComponent with only a value
     >>> NameComponent("sub", None, value_only=True).name({"sub": "01"})
     '01'
+
+    3) Build a NameComponent that is optional, build without name
+    >>> NameComponent("acq", "-", required=False).name({"sub": "01"})
+    ''
+
+    Notes
+    -----
+    Name components with only a value are required to be true because
+    otherwise inferring the attribute from the position is required. This
+    is similar in concept to the idea of positional arguments on the
+    command line. At the moment we do not want to support a complex
+    requirement hierarchy, and therefore enforce a binary "required" or
+    "not required."
     """
     def __init__(
         self,
         key: str,
         kv_delim: str,
         value_only: bool = False,
+        required: bool = True,
     ) -> None:
         self.key = key
         self.kv_delim = kv_delim
         self.value_only = value_only
+        if value_only or required:
+            self.required = True
+        else:
+            self.required = False
 
     def name(self, attributes: dict) -> str:
         """Names a component from the given attributes
@@ -270,11 +286,29 @@ class NameComponent:
         -------
         String representing the name component.
         """
-        # Build the value component, which is always needed
-        value = attributes[self.key]
-        # Add key component if needed
-        if self.value_only:
-            component = value
+        has_key = self.key in attributes.keys()
+        if self.required and not has_key:
+            raise ValueError(
+                f"NameComponent is required for key {self.key}, but is not"
+                f" present in keys: {', '.join(attributes.keys())}"
+            )
+        if has_key:
+            # Build the value component, which is always needed
+            value = attributes[self.key]
+            # Add key component if needed
+            if self.value_only:
+                component = value
+            else:
+                component = self.key + self.kv_delim + value
         else:
-            component = self.key + self.kv_delim + value
+            return ""
+
         return component
+
+
+class InclusionRule:
+    pass
+
+
+class RequirementRule:
+    pass
