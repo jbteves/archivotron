@@ -99,6 +99,13 @@ def test_gen_path_succeeds():
     bids.add_component("recording", required=False)
     bids.add_component("suffix", value_only=True)
     bids.terminate()
+    bids.add_inclusion_rule(
+        "suffix", ["bold", "cbv", "sbref"],
+        [
+            "sub", "ses", "modality", "task", "acq", "ce", "rec", "dir",
+            "run", "echo", "part", "suffix",
+        ]
+    )
 
     atts = {
         "sub": "01",
@@ -138,6 +145,15 @@ def test_gen_path_succeeds():
     )
 
     assert bids.gen_path(atts) == expected
+
+    with pytest.raises(ValueError, match=r"Rule violation*"):
+        atts["recording"] = "resp"
+        bids.gen_path(atts)
+
+    with pytest.raises(ValueError, match=r"Rule violation*"):
+        atts["recording"] = "resp"
+        atts["suffix"] = "sbref"
+        bids.gen_path(atts)
 
 
 def test_gen_path_fails():

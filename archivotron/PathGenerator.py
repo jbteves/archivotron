@@ -22,6 +22,8 @@ class PathGenerator:
         The key-value separator. Default "-"
     _file_sep: str
         The file separator. Default is platform-specific from os.path.
+    _rules: list
+        The rules to enforce on passed attributes
 
     Methods
     -------
@@ -78,6 +80,7 @@ class PathGenerator:
             self._components = [self._file_sep]
         else:
             self._components = [root + self._file_sep]
+        self._rules = []
 
     def add_component(
         self,
@@ -136,6 +139,31 @@ class PathGenerator:
         """Terminate the build pattern"""
         self._terminated = True
 
+    # TODO: create globally required rule
+
+    def add_inclusion_rule(
+        self,
+        key: str,
+        value: Union[str, list],
+        attributes: list
+    ) -> None:
+        """Make a rule that for a certain key-value domain, only some
+        attributes are allowed.
+
+        Parameters
+        ----------
+        key: str
+            The key that is relevant to this rule
+        value: str, list
+            The value domain that is relevant to this rule
+        attributes: list
+            The list of attributes which are allowed to be used with this
+            rule
+        """
+        # TODO: add logic to make "required" components automatically
+        # allowed in all inclusion rules
+        self._rules.append(InclusionRule(key, value, attributes))
+
     def gen_path(self, attributes: dict) -> str:
         """Generate a path with this generator and an attribute dict
 
@@ -154,6 +182,15 @@ class PathGenerator:
                 "No path target completed!"
                 "Use the terminate_path method to terminate the builder."
             )
+
+        # subset keys in case extraneous entities are present to only
+        # attributes used to build components
+        subset_keys = (
+            k for k in self._attributes if k in attributes.keys()
+        )
+        subset = {k: attributes[k] for k in subset_keys}
+        for rule in self._rules:
+            rule.check(subset)
 
         try:
             path = "".join(
@@ -307,7 +344,60 @@ class NameComponent:
 
 
 class InclusionRule:
-    pass
+    """Rule for enforcing compatibility with attributes
+
+    Attributes
+    ----------
+    key: str
+        The key that this rule depends on
+    value: set(str)
+        The value(s) that trigger the rule
+    includes: set(str)
+        The attributes/keys that are compatible with this key-value pair
+    """
+    def __init__(
+        self, key: str, value: Union[str, list], includes: list
+    ):
+        """Constructor for InclusionRule
+
+        Parameters
+        ----------
+        key: str
+            The key that this rule will depend on
+        value: str, list(str)
+            The value(s) that trigger the rule
+        includes: list(str)
+            The compatible attributes for this rule
+        """
+
+        self.key = key
+        if isinstance(value, str):
+            value = [value]
+        value = set(value)
+        self.value = value
+        includes = set(includes)
+        self.includes = includes
+
+    def check(self, attributes: dict):
+        """Checker for the rule
+
+        Parameters
+        ----------
+        attributes: dict
+            The attributes to check
+        """
+        if not (self.key in attributes.keys()):
+            return
+        val = attributes[self.key]
+        if val not in self.value:
+            return
+        # The rule applies, make sure that it's enforced
+        for k in attributes.keys():
+            if k not in self.includes:
+                raise ValueError(
+                    f"Rule violation: attribute {k} disallowed for"
+                    f" key {self.key}, value {val}"
+                )
 
 
 class RequirementRule:
