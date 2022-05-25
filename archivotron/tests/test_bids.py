@@ -1,3 +1,5 @@
+import pytest
+
 from archivotron.bids import generate_bids
 
 
@@ -26,3 +28,35 @@ def test_generate_bids():
     )
 
     assert bids.gen_path(atts) == expected
+
+
+def test_bids_into():
+    """Tests for breaking bids names into attributes"""
+    bids = generate_bids()
+
+    # simple anatomical
+
+    expected = {
+        "sub": "1",
+        "modality": "anat",
+        "suffix": "T1w",
+    }
+    p = "/sub-1/anat/sub-1_T1w"
+    assert bids.into_attributes(p) == expected
+
+    expected = {
+        "sub": "01",
+        "ses": "pre",
+        "modality": "func",
+        "task": "scream",
+        "echo": "1",
+        "suffix": "bold",
+    }
+    p = "/sub-01/ses-pre/func/sub-01_ses-pre_task-scream_echo-1_bold"
+    assert bids.into_attributes(p) == expected
+
+    # This will trigger a warning
+    with pytest.warns(UserWarning):
+        expected = {"sub": "1", "suffix": "T1w"}
+        p = "/sub-1_T1w"
+        assert bids.into_attributes(p) == expected
