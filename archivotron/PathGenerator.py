@@ -208,13 +208,26 @@ class PathGenerator:
 
         return path
 
-    def into_attributes(self, fpath: str):
+    def into_attributes(self, fpath: str, mode: str = "warn"):
         """Convert a path into attributes for this convention.
 
         Parameters
         ----------
         fpath: str
             The path to decompose into attributes.
+        mode: str
+            The mode to use. Default "warn."
+            Each of the following is allowed for whether the program alerts
+            you to a missing name requirement:
+            - "loose" will not warn at all
+            - "warn" will raise a python warning
+            - "strict" will raise a ValueError
+
+        Raises
+        ------
+        ValueError, if the filename does not contain required entities
+        while the function is called with "strict" mode, or if an invalid
+        mode is used.
 
         Notes
         -----
@@ -230,6 +243,12 @@ class PathGenerator:
         place an os separator at the beginning so that it is interpreted
         correctly, for example "/file.ext" rather than "file.ext"
         """
+        allowed_modes = ("loose", "warn", "strict")
+        if mode not in allowed_modes:
+            raise ValueError(
+                f"Mode {mode} is not supported; "
+                f"please use one of {allowed_modes}"
+            )
         atts = {}
         remaining = fpath
         reversed_nc = [x for x in reversed(self._components)]
@@ -240,10 +259,15 @@ class PathGenerator:
             for sp in [split]:
                 parts = remaining.split(sp)
                 if curr.required and len(parts) == 1:
-                    warn(
-                        f"Required key {curr.key} not found, "
-                        f"discarded parsed part {parts[-1]}"
-                    )
+                    if mode == "loose":
+                        continue
+                    elif mode == "warn":
+                        warn(
+                            f"Required key {curr.key} not found, "
+                            f"discarded parsed part {parts[-1]}"
+                        )
+                    elif mode == "strict":
+                        raise ValueError(f"Required key {curr.key} not found.")
                     remaining = sp.join(parts[:-1])
                 elif len(parts) == 1:
                     _ = 0

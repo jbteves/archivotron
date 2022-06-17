@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 
 from archivotron.bids import generate_bids
@@ -60,3 +62,18 @@ def test_bids_into():
         expected = {"sub": "1", "suffix": "T1w"}
         p = "/sub-1_T1w"
         assert bids.into_attributes(p) == expected
+
+    # This should print nothing at all
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        expected = {"sub": "1", "suffix": "T1w"}
+        p = "/sub-1_T1w"
+        assert bids.into_attributes(p, mode="loose") == expected
+
+    with pytest.raises(ValueError, match=r"Required key"):
+        p = "/sub-1_T1w"
+        assert bids.into_attributes(p, mode="strict") == expected
+
+    with pytest.raises(ValueError, match=r"Mode"):
+        p = "/sub-01/ses-pre/func/sub-01_ses-pre_task-scream_echo-1_bold"
+        bids.into_attributes(p, mode="Modey McModeFace")
