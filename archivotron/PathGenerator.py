@@ -1,6 +1,7 @@
 """PathGenerator, contains definition for PathGenerator class"""
 
 from typing import Union
+from warnings import warn
 
 import os
 
@@ -30,6 +31,7 @@ class PathGenerator:
     add_level
     add_fname
     from
+    into_attributes
     """
     def __init__(
         self,
@@ -205,6 +207,74 @@ class PathGenerator:
         path = self._strip_repeat_delimiters(path)
 
         return path
+
+    def into_attributes(self, fpath: str, mode: str = "warn"):
+        """Convert a path into attributes for this convention.
+
+        Parameters
+        ----------
+        fpath: str
+            The path to decompose into attributes.
+        mode: str
+            The mode to use. Default "warn."
+            Each of the following is allowed for whether the program alerts
+            you to a missing name requirement:
+            - "loose" will not warn at all
+            - "warn" will raise a python warning
+            - "strict" will raise a ValueError
+
+        Raises
+        ------
+        ValueError, if the filename does not contain required entities
+        while the function is called with "strict" mode, or if an invalid
+        mode is used.
+
+        Notes
+        -----
+        This function behaves a bit funny, so please read this!
+        A few behaviors that you might not expect:
+        1. Invalid structures will still be parsed, and instead raise
+        warnings that expected fields were not detected. This is done
+        because if something is very close to the convention but not quite
+        compliant, the attributes harvested may still be useful.
+        2. If you have several paths in your convention (/dir/dir/dir...)
+        then you can still harvest the final filename and get its
+        attributes (see point 1) at the cost of warnings, however, you must
+        place an os separator at the beginning so that it is interpreted
+        correctly, for example "/file.ext" rather than "file.ext"
+        """
+        allowed_modes = ("loose", "warn", "strict")
+        if mode not in allowed_modes:
+            raise ValueError(
+                f"Mode {mode} is not supported; "
+                f"please use one of {allowed_modes}"
+            )
+        atts = {}
+        remaining = fpath
+        reversed_nc = [x for x in reversed(self._components)]
+        for curr, prev in zip(reversed_nc[0:-1:2], reversed_nc[1:-1:2]):
+            split = prev
+            if not curr.value_only:
+                split += curr.key + curr.kv_delim
+            for sp in [split]:
+                parts = remaining.split(sp)
+                if curr.required and len(parts) == 1:
+                    if mode == "loose":
+                        continue
+                    elif mode == "warn":
+                        warn(
+                            f"Required key {curr.key} not found, "
+                            f"discarded parsed part {parts[-1]}"
+                        )
+                    elif mode == "strict":
+                        raise ValueError(f"Required key {curr.key} not found.")
+                    remaining = sp.join(parts[:-1])
+                elif len(parts) == 1:
+                    _ = 0
+                else:
+                    atts[curr.key] = parts[-1]
+                    remaining = sp.join(parts[:-1])
+        return atts
 
     def _str(o: Union[str, "NameComponent"], att: dict) -> str:
         """Ingests a string or name component and returns a string
