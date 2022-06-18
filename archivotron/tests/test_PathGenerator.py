@@ -1,5 +1,6 @@
 from archivotron import PathGenerator
 
+import os
 import pytest
 
 
@@ -166,3 +167,60 @@ def test_gen_path_fails():
 
     pg.add_component("subject")
     pg.terminate()
+
+def test_json():
+    # BIDS T1w anatomical, func
+    bids = PathGenerator()
+    bids.add_component("sub")
+    bids.add_filesep()
+    bids.add_component("ses", required=False)
+    bids.add_filesep()
+    bids.add_component("modality", value_only=True)
+    bids.add_filesep()
+    bids.add_component("sub")
+    bids.add_component("ses", required=False)
+    bids.add_component("task", required=False)
+    bids.add_component("acq", required=False)
+    bids.add_component("ce", required=False)
+    bids.add_component("rec", required=False)
+    bids.add_component("run", required=False)
+    bids.add_component("dir", required=False)
+    bids.add_component("mod", required=False)
+    bids.add_component("echo", required=False)
+    bids.add_component("inv", required=False)
+    bids.add_component("flip", required=False)
+    bids.add_component("mt", required=False)
+    bids.add_component("part", required=False)
+    bids.add_component("recording", required=False)
+    bids.add_component("suffix", value_only=True)
+    bids.terminate()
+    bids.add_inclusion_rule(
+        "suffix", ["bold", "cbv", "sbref"],
+        [
+            "sub", "ses", "modality", "task", "acq", "ce", "rec", "dir",
+            "run", "echo", "part", "suffix",
+        ]
+    )
+
+    atts = {
+        "sub": "01",
+        "ses": "pre",
+        "modality": "anat",
+        "acq": "a",
+        "ce": "a",
+        "rec": "a",
+        "run": "1",
+        "part": "mag",
+        "suffix": "T1w",
+    }
+
+    temp_name = "TEMP_DELETE_ME.json"
+    bids.to_json(temp_name)
+    bids_from_file = PathGenerator.from_json(temp_name)
+    os.remove(temp_name)
+    
+    assert bids.gen_path(atts) == bids_from_file.gen_path(atts)
+
+# TODO: delete me
+if __name__ == '__main__':
+    test_json()

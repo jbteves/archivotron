@@ -3,6 +3,11 @@
 from typing import Union
 
 import os
+import json
+
+
+# This is hacky sorry
+DIRECTORY_KEYWORD = "DIRECTORY_SPECIAL_KEYWORD"
 
 
 class PathGenerator:
@@ -202,9 +207,158 @@ class PathGenerator:
                 if k not in self._attributes:
                     raise ValueError(f"Attribute {k} is not valid")
 
+        print(path)
         path = self._strip_repeat_delimiters(path)
 
         return path
+
+    def into_attributes(self, fpath: str, mode: str = "warn"):
+        """Convert a path into attributes for this convention.
+
+        Parameters
+        ----------
+        fpath: str
+            The path to decompose into attributes.
+        mode: str
+            The mode to use. Default "warn."
+            Each of the following is allowed for whether the program alerts
+            you to a missing name requirement:
+            - "loose" will not warn at all
+            - "warn" will raise a python warning
+            - "strict" will raise a ValueError
+
+        Raises
+        ------
+        ValueError, if the filename does not contain required entities
+        while the function is called with "strict" mode, or if an invalid
+        mode is used.
+
+        Notes
+        -----
+        This function behaves a bit funny, so please read this!
+        You must place an os separator at the beginning of your file to
+        make sure that it is interpreted correctly.
+        """
+        # TODO: make it so it can interpret just a file.
+        allowed_modes = ("loose", "warn", "strict")
+        if mode not in allowed_modes:
+            raise ValueError(
+                f"Mode {mode} is not supported; "
+                f"please use one of {allowed_modes}"
+            )
+        atts = {}
+        remaining = fpath
+        reversed_nc = [x for x in reversed(self._components)]
+        for curr, prev in zip(reversed_nc[0:-1:2], reversed_nc[1:-1:2]):
+            split = prev
+            if not curr.value_only:
+                split += curr.key + curr.kv_delim
+            for sp in [split]:
+                parts = remaining.split(sp)
+                if curr.required and len(parts) == 1:
+                    if mode == "loose":
+                        continue
+                    elif mode == "warn":
+                        warn(
+                            f"Required key {curr.key} not found, "
+                            f"discarded parsed part {parts[-1]}"
+                        )
+                    elif mode == "strict":
+                        raise ValueError(f"Required key {curr.key} not found.")
+                    remaining = sp.join(parts[:-1])
+                elif len(parts) == 1:
+                    _ = 0
+                else:
+                    atts[curr.key] = parts[-1]
+                    remaining = sp.join(parts[:-1])
+        return atts
+
+    def to_dict(self) -> str:
+        """Convert this object into a dictionary
+
+        Returns
+        -------
+        Dict representation of this object.
+
+        Notes
+        -----
+        Mostly for serialization into JSON but made public in case you want
+        something else.
+        """
+        comps = []
+        for c in self._components:
+            if isinstance(c, str):
+                if c == self._file_sep:
+                    comps.append({"Key": DIRECTORY_KEYWORD})
+            else:
+                comps.append(c.to_dict())
+        return {
+            "Components": comps,
+            "AttributeSeparator": self._attribute_sep,
+            "KeyValueSeparator": self._kv_sep,
+            "InclusionRules": [
+                r.to_dict() for r in self._rules if isinstance(r, InclusionRule)
+            ],
+        }
+
+    def to_json(self, fname: str) -> None:
+        """Convert this object to a JSON file for later re-use.
+
+        Parameters
+        ----------
+        fname: str
+            The filename to put this object into.
+        """
+        print(self.to_dict())
+        with open(fname, "w") as f:
+            json.dump(self.to_dict(), f)
+
+    def from_json(
+            fname: str,
+            root: str = "",
+            file_sep: str = None,
+        ):
+        """Get a name generator from a JSON file
+
+        Parameters
+        ----------
+        fname: str
+            The JSON filename
+        root: str
+            The root of this name generator. Default "".
+        file_sep: str
+            The file separator of this name generator. Default None,
+            which results in automatic choosing.
+
+        Returns
+        -------
+        PathGenerator built from the file
+        """
+        with open(fname, "r") as f:
+            this_dict = json.load(f)
+        ng = PathGenerator(
+            root=root,
+            attribute_sep=this_dict["AttributeSeparator"],
+            kv_sep=this_dict["KeyValueSeparator"],
+            file_sep=file_sep
+        )
+        for c in this_dict["Components"]:
+            if c["Key"] == DIRECTORY_KEYWORD:
+                ng.add_filesep()
+            else:
+                ng.add_component(
+                    c["Key"],
+                    delimiter=c["KVDelim"],
+                    value_only=c["ValueOnly"],
+                    required=c["Required"]
+                )
+
+
+        for ir in this_dict["InclusionRules"]:
+            ng.add_inclusion_rule(ir["Key"], ir["Value"], ir["Includes"])
+
+        ng.terminate()
+        return ng
 
     def _str(o: Union[str, "NameComponent"], att: dict) -> str:
         """Ingests a string or name component and returns a string
@@ -342,6 +496,14 @@ class NameComponent:
 
         return component
 
+    def to_dict(self) -> dict:
+        return {
+            "Key": self.key,
+            "KVDelim": self.kv_delim,
+            "ValueOnly": self.value_only,
+            "Required": self.required,
+        }
+
 
 class InclusionRule:
     """Rule for enforcing compatibility with attributes
@@ -398,6 +560,13 @@ class InclusionRule:
                     f"Rule violation: attribute {k} disallowed for"
                     f" key {self.key}, value {val}"
                 )
+
+    def to_dict(self) -> dict:
+        return {
+            "Key": self.key,
+            "Value": list(self.value),
+            "Includes": list(self.includes)
+        }
 
 
 class RequirementRule:
