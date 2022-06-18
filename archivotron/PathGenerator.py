@@ -1,6 +1,7 @@
 """PathGenerator, contains definition for PathGenerator class"""
 
 from typing import Union
+from warnings import warn
 
 import os
 import json
@@ -35,6 +36,7 @@ class PathGenerator:
     add_level
     add_fname
     from
+    into_attributes
     """
     def __init__(
         self,
@@ -232,14 +234,7 @@ class PathGenerator:
         ValueError, if the filename does not contain required entities
         while the function is called with "strict" mode, or if an invalid
         mode is used.
-
-        Notes
-        -----
-        This function behaves a bit funny, so please read this!
-        You must place an os separator at the beginning of your file to
-        make sure that it is interpreted correctly.
         """
-        # TODO: make it so it can interpret just a file.
         allowed_modes = ("loose", "warn", "strict")
         if mode not in allowed_modes:
             raise ValueError(
