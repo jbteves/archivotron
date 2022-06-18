@@ -292,7 +292,8 @@ class PathGenerator:
             "AttributeSeparator": self._attribute_sep,
             "KeyValueSeparator": self._kv_sep,
             "InclusionRules": [
-                r.to_dict() for r in self._rules if isinstance(r, InclusionRule)
+                r.to_dict()
+                for r in self._rules if isinstance(r, InclusionRule)
             ],
         }
 
@@ -312,7 +313,7 @@ class PathGenerator:
             fname: str,
             root: str = "",
             file_sep: str = None,
-        ):
+    ):
         """Get a name generator from a JSON file
 
         Parameters
@@ -347,7 +348,6 @@ class PathGenerator:
                     value_only=c["ValueOnly"],
                     required=c["Required"]
                 )
-
 
         for ir in this_dict["InclusionRules"]:
             ng.add_inclusion_rule(ir["Key"], ir["Value"], ir["Includes"])

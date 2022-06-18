@@ -168,6 +168,7 @@ def test_gen_path_fails():
     pg.add_component("subject")
     pg.terminate()
 
+
 def test_json():
     # BIDS T1w anatomical, func
     bids = PathGenerator()
@@ -218,9 +219,5 @@ def test_json():
     bids.to_json(temp_name)
     bids_from_file = PathGenerator.from_json(temp_name)
     os.remove(temp_name)
-    
-    assert bids.gen_path(atts) == bids_from_file.gen_path(atts)
 
-# TODO: delete me
-if __name__ == '__main__':
-    test_json()
+    assert bids.gen_path(atts) == bids_from_file.gen_path(atts)
