@@ -209,7 +209,6 @@ class PathGenerator:
                 if k not in self._attributes:
                     raise ValueError(f"Attribute {k} is not valid")
 
-        print(path)
         path = self._strip_repeat_delimiters(path)
 
         return path
@@ -305,7 +304,6 @@ class PathGenerator:
         fname: str
             The filename to put this object into.
         """
-        print(self.to_dict())
         with open(fname, "w") as f:
             json.dump(self.to_dict(), f)
 
